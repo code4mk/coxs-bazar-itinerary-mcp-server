@@ -1,5 +1,6 @@
 """Main FastMCP server for Cox's Bazar AI Itinerary."""
 import sys
+import os
 from pathlib import Path
 from typing import Any
 
@@ -8,12 +9,21 @@ if __name__ == "__main__" or "mcp_server" not in sys.modules:
     src_path = Path(__file__).parent.parent  # This points to src/
     if str(src_path) not in sys.path:
         sys.path.insert(0, str(src_path))
-
+from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 from mcp_server.utils.register_mcp_components import register_mcp_components
 
+load_dotenv()
+
+# Get transport name and port from environment variables
+transport_name = os.environ.get("TRANSPORT_NAME") or "stdio"
+port = os.environ.get("PORT") or 8000
+
 # Create the FastMCP server
-mcp = FastMCP[Any]("Cox's Bazar AI Itinerary MCP")
+if transport_name == "stdio":
+    mcp = FastMCP[Any]("Cox's Bazar AI Itinerary MCP")
+else:
+    mcp = FastMCP[Any]("Cox's Bazar AI Itinerary MCP", host="0.0.0.0", port=port)
 
 # Get the base directory
 base_dir = Path(__file__).parent
@@ -26,7 +36,7 @@ def main():
     print("🌴 Starting Cox's Bazar AI Itinerary MCP server...")
     print("📍 Location: Cox's Bazar, Bangladesh")
     print("🚀 Server ready!")
-    mcp.run()
+    mcp.run(transport=transport_name)
 
 if __name__ == "__main__":
     main()

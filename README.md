@@ -18,6 +18,8 @@ uv sync
 
 ### Run with MCP dev (development) - inspector tool
 
+* Need node version > 20.x.x
+
 ```bash
 uv run mcp dev src/mcp_server/server.py
 ```
