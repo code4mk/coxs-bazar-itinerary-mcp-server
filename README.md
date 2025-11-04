@@ -116,6 +116,24 @@ Then add this configuration to your Claude Desktop config file:
 }
 ```
 
+### Option 3: Using uvx (Run directly from GitHub)
+
+Add this configuration to your Claude Desktop config file:
+
+```json
+{
+  "mcpServers": {
+    "coxs-bazar-itinerary-mcp": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/code4mk/coxs-bazar-itinerary-mcp-server.git",
+        "cox-mcp-server"
+      ]
+    }
+  }
+}
+
 ## License
 
 MIT
