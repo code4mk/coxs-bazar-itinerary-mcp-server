@@ -133,6 +133,7 @@ Add this configuration to your Claude Desktop config file:
     }
   }
 }
+```
 
 ## License
 
