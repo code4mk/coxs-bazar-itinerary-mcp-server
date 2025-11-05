@@ -18,8 +18,8 @@ def register_itinerary_tools(mcp):
         Returns:
             Formatted prompt for AI to generate detailed itinerary
         """
-        from mcp_server.resources.weather import get_temperature_forecast
-        from mcp_server.prompts.travel_prompts import get_prompt
+        from mcp_server.components.resources.weather import get_temperature_forecast
+        from mcp_server.components.prompts.travel_prompts import get_prompt
         
         # Parse start date
         try:

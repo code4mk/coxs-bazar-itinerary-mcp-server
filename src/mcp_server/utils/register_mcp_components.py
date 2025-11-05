@@ -19,18 +19,18 @@ def register_mcp_components(mcp_instance, base_dir: Path):
         >>> base_dir = Path(__file__).parent
         >>> register_mcp_components(mcp, base_dir)
         🔍 Auto-discovering and registering MCP components...
-        ✅ Registered: mcp_server.tools.itinerary.register_itinerary_tools
-        ✅ Registered: mcp_server.prompts.travel_prompts.register_travel_prompts
-        ✅ Registered: mcp_server.resources.weather.register_weather_resources
+        ✅ Registered: mcp_server.components.tools.itinerary.register_itinerary_tools
+        ✅ Registered: mcp_server.components.prompts.travel_prompts.register_travel_prompts
+        ✅ Registered: mcp_server.components.resources.weather.register_weather_resources
         ✨ All MCP components registered!
     """
     print("🔍 Auto-discovering and registering MCP components...")
     
     # Define component directories and their module prefixes
     components = [
-        (base_dir / "tools", "mcp_server.tools"),
-        (base_dir / "prompts", "mcp_server.prompts"),
-        (base_dir / "resources", "mcp_server.resources"),
+        (base_dir / "components" / "tools", "mcp_server.components.tools"),
+        (base_dir / "components" / "prompts", "mcp_server.components.prompts"),
+        (base_dir / "components" / "resources", "mcp_server.components.resources"),
     ]
     
     # Scan and register each component type
