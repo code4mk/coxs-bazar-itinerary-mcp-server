@@ -49,6 +49,9 @@ uv run cox-mcp-server
 │   └── mcp_server/
 │       ├── __init__.py
 │       ├── server.py           # Main server entry point
+│       ├── models/             # Pydantic models and schemas
+│       │   ├── __init__.py
+│       │   └── itinerary_models.py  # Itinerary data models
 │       ├── components/         # MCP components
 │       │   ├── __init__.py
 │       │   ├── tools/          # MCP tools

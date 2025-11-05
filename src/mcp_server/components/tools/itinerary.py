@@ -1,12 +1,15 @@
 """Itinerary generation tools."""
 from datetime import datetime
 from dateutil import parser
+from mcp.server.fastmcp import Context
+from mcp.server.session import ServerSession
+from mcp_server.models import ItineraryPreferences
 
 def register_itinerary_tools(mcp):
     """Register itinerary tools with the MCP server."""
     
     @mcp.tool()
-    def cox_ai_itinerary(days: int, start_date: str) -> str:
+    async def cox_ai_itinerary(days: int, start_date: str, ctx: Context[ServerSession, None]) -> str:
         """
         Full workflow: fetch daily temperatures + generate AI itinerary.
         Uses the registered MCP prompt 'generate_itinerary' for consistency.
@@ -20,6 +23,28 @@ def register_itinerary_tools(mcp):
         """
         from mcp_server.components.resources.weather import get_temperature_forecast
         from mcp_server.components.prompts.travel_prompts import get_prompt
+        
+        # Elicitation: Suggest minimum 2 days for a better itinerary
+        if days == 1:
+            print("Elicitation: Suggest minimum 2 days for a better itinerary")
+            result = await ctx.elicit(
+                message=(
+                    f"⚠️ Only 1 day detected for your itinerary starting on {start_date}! "
+                    "For a meaningful travel experience, we recommend at least 2 days. "
+                    "This allows for varied activities, proper rest, and a better exploration of the destination. "
+                    "Would you like to extend your trip to 2 or more days?"
+                ),
+                schema=ItineraryPreferences,
+            )
+            
+            if result.action == "accept" and result.data:
+                if result.data.extendTrip:
+                    # Use the new extended days
+                    days = max(result.data.newDays, 2)  # Ensure at least 2 days
+                else:
+                    return "[CANCELLED] Itinerary generation cancelled. Please plan for at least 2 days for a better experience."
+            else:
+                return "[CANCELLED] Itinerary generation cancelled by user."
         
         # Parse start date
         try:
