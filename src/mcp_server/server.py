@@ -3,7 +3,6 @@ import sys
 import os
 from pathlib import Path
 from typing import Any
-
 # Add src directory to path if running directly
 if __name__ == "__main__" or "mcp_server" not in sys.modules:
     src_path = Path(__file__).parent.parent  # This points to src/
@@ -12,21 +11,24 @@ if __name__ == "__main__" or "mcp_server" not in sys.modules:
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 from mcp_server.utils.register_mcp_components import register_mcp_components
+from mcp_server.utils.types import FastMCPConfigDict
+
 
 load_dotenv()
-
 # Get transport name and port from environment variables
 transport_name = os.environ.get("TRANSPORT_NAME") or "stdio"
 port = os.environ.get("PORT") or 8000
-
-# Create the FastMCP server
-if transport_name == "stdio":
-    mcp = FastMCP[Any]("Cox's Bazar AI Itinerary MCP")
-else:
-    mcp = FastMCP[Any]("Cox's Bazar AI Itinerary MCP", host="0.0.0.0", port=port)
-
-# Get the base directory
 base_dir = Path(__file__).parent
+fast_mcp_config: FastMCPConfigDict = {
+    "name": "Cox's Bazar AI Itinerary MCP"
+}
+
+if transport_name == "sse" or transport_name == "streamable-http":
+    fast_mcp_config["host"] = "0.0.0.0"
+    fast_mcp_config["port"] = int(port)
+    
+
+mcp = FastMCP[Any](**fast_mcp_config)
 
 # Auto-register all MCP components (tools, prompts, resources)
 register_mcp_components(mcp, base_dir)
