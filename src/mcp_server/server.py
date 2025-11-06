@@ -20,6 +20,7 @@ base_dir = Path(__file__).parent
 # Auto-register all MCP components (tools, prompts, resources)
 register_mcp_components(base_dir)
 
+
 def main():
     """Run the MCP server."""
     print("🌴 Starting Cox's Bazar AI Itinerary MCP server...")
