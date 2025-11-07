@@ -6,8 +6,10 @@ from mcp_server.components.prompts.travel_prompts import generate_itinerary_prom
 from mcp_server.utils.get_weather_forecast import get_activity_suggestions as get_suggestions
 from mcp_server.components.resources.weather import resource_weather_forecast
 from mcp_server.utils.elicitation import elicit_trip_extension
+from mcp_server.utils.auth_helpers import require_auth
 
 @mcp.tool()
+@require_auth
 async def cox_ai_itinerary(start_date: str, days: int, ctx: Context) -> str:
     """
     Full workflow: fetch daily temperatures + generate AI itinerary.

@@ -60,13 +60,23 @@ def register_mcp_components(base_dir: Path, transport: str = "stdio") -> None:
     if transport.lower() != "stdio":
         try:
             config_path = base_dir / "config"
-            custom_routes_file = config_path / "project_custom_routes.py"
             
+            # Register project custom routes
+            custom_routes_file = config_path / "project_custom_routes.py"
             if custom_routes_file.exists():
                 importlib.import_module("mcp_server.config.project_custom_routes")
-                print(f"✅ Registered custom routes (transport: {transport})")
+                print(f"✅ Registered project custom routes")
             else:
                 print(f"⚠️  Warning: Custom routes file not found at {custom_routes_file}")
+            
+            # Register auth routes
+            auth_routes_file = config_path / "auth_routes.py"
+            if auth_routes_file.exists():
+                importlib.import_module("mcp_server.config.auth_routes")
+                print(f"✅ Registered auth routes (transport: {transport})")
+            else:
+                print(f"⚠️  Warning: Auth routes file not found at {auth_routes_file}")
+                
         except Exception as e:
             print(f"❌ Error importing custom routes: {e}")
     
