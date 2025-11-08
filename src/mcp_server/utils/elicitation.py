@@ -39,10 +39,10 @@ async def elicit_trip_extension(
     # Only elicit if current days is below minimum
     if current_days < min_days:
         try:
-            print(f"Elicitation: Suggest minimum {min_days} days for a better itinerary")
+            await ctx.info(f"Elicitation: Suggest minimum {min_days} days for a better itinerary")
             result = await ctx.elicit(
                 message=(
-                    f"⚠️ Only {current_days} day(s) detected for your itinerary starting on {start_date}! "
+                    f"Only {current_days} day(s) detected for your itinerary starting on {start_date}! "
                     f"For a meaningful travel experience, we recommend at least {min_days} days. "
                     "This allows for varied activities, proper rest, and a better exploration of the destination. "
                     f"Would you like to extend your trip to {min_days} or more days?"
@@ -54,7 +54,7 @@ async def elicit_trip_extension(
                 if result.data.extendTrip:
                     # Use the new extended days
                     days = max(result.data.newDays, min_days)  # Ensure at least min_days
-                    print(f"Trip extended to {days} days")
+                    await ctx.info(f"Trip extended to {days} days")
                 else:
                     raise ValueError(
                         f"[CANCELLED] Itinerary generation cancelled. "
@@ -70,12 +70,12 @@ async def elicit_trip_extension(
             
             # If elicitation is not supported by the client, continue with current days
             # but add a warning message to the output
-            print(
+            await ctx.error(
                 f"Note: Elicitation not supported by client ({type(e).__name__}). "
                 f"Proceeding with {current_days}-day itinerary."
             )
             elicitation_note = (
-                f"ℹ️ NOTE: Your MCP client does not support interactive elicitation. "
+                f"NOTE: Your MCP client does not support interactive elicitation. "
                 f"We recommend at least {min_days} days for a better travel experience. "
                 f"Proceeding with {current_days}-day itinerary.\n\n"
             )
