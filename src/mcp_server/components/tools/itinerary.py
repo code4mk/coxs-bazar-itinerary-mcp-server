@@ -26,6 +26,7 @@ async def cox_ai_itinerary(start_date: str, days: int, ctx: Context) -> str:
         days, elicitation_note = await elicit_trip_extension(ctx, start_date, days, min_days=2)
     except ValueError as e:
         # User cancelled the trip extension
+        await ctx.error(f"Error: {str(e)}")
         return str(e)
     
     # Parse start date
