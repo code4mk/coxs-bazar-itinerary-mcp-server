@@ -5,7 +5,7 @@ from dateutil import parser
 from mcp_server.mcp_instance import mcp
 from mcp_server.utils.get_weather_forecast import get_activity_suggestions as get_suggestions
 from mcp_server.utils.elicitation import elicit_trip_extension
-from mcp_server.core.prompts.get_travel_prompts import get_itinerary_prompt, get_weather_based_activities_prompt
+from mcp_server.core.prompts.travel import get_itinerary_prompt, get_weather_based_activities_prompt
 
 @mcp.tool()
 async def cox_ai_itinerary(ctx: Context, start_date: str, days: int, ) -> str:
