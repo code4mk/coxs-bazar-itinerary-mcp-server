@@ -1,6 +1,6 @@
 # cox-mcp-server connect remote mcp server
 
-## Cursor, Kiro and http type supported mcp clients
+## Cursor
 
 ```json
 {
@@ -20,7 +20,13 @@
   "mcpServers": {
     "cox-mcp-server": {
       "command": "npx", 
-      "args": ["-y", "mcp-remote", "https://coxs-bazar-itinerary-mcp-server.onrender.com/mcp"]
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://coxs-bazar-itinerary-mcp-server.onrender.com/mcp",
+        "--transport",
+        "http"
+       ]
     }
   }
 }
