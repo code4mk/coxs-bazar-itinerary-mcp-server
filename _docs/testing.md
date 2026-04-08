@@ -9,47 +9,86 @@ This MCP server project includes a comprehensive test suite with unit tests and 
 ```
 tests/
 ├── __init__.py
-├── conftest.py              # Shared pytest configuration
-├── fixtures/                # Test fixtures and mocks
+├── conftest.py                          # Shared pytest configuration (imports fixtures)
+├── fixtures/                            # Test fixtures and mocks
 │   ├── __init__.py
-│   ├── context.py          # Context fixtures
-│   └── weather.py          # Weather-related fixtures
-├── unit/                    # Unit tests (39 tests)
-│   ├── test_elicitation.py
-│   ├── test_models.py
-│   ├── test_travel_prompts.py
-│   ├── test_weather_forecast.py
-│   └── test_weather_resource.py
-└── integration/             # Integration tests (15 tests)
-    ├── test_itinerary_tool.py
-    └── test_weather_api.py
+│   ├── context.py                       # Mock MCP Context fixture
+│   └── weather.py                       # Weather sample data fixtures
+├── unit/                                # Unit tests (90 tests)
+│   ├── __init__.py
+│   ├── test_auth_additional_tools.py    # Auth-related MCP tool handlers
+│   ├── test_auth_provider.py            # Auth provider selection logic
+│   ├── test_elicitation.py              # Trip extension elicitation flows
+│   ├── test_helpers.py                  # Shared helper utilities
+│   ├── test_itinerary_service_extra.py  # Itinerary service activity suggestions
+│   ├── test_itinerary_tool_handler.py   # Itinerary tool handler delegation
+│   ├── test_models.py                   # Data model validation
+│   ├── test_server.py                   # Server main() wiring and transports
+│   ├── test_travel_prompts.py           # Travel prompt template generation
+│   ├── test_travel_prompts_handler.py   # Prompt handler delegation
+│   ├── test_weather_forecast.py         # Weather forecast utilities
+│   └── test_weather_resource.py         # Weather MCP resource handler
+└── integration/                         # Integration tests (13 tests)
+    ├── __init__.py
+    ├── test_itinerary_tool.py           # End-to-end itinerary generation
+    └── test_weather_api.py              # Open-Meteo weather API client
 ```
 
-**Total Tests**: 54 tests
-- **Unit Tests**: 39 tests (fast, isolated component testing)
-- **Integration Tests**: 15 tests (component interaction testing)
+**Total Tests**: 103 tests
+- **Unit Tests**: 90 tests across 12 files (fast, isolated component testing)
+- **Integration Tests**: 13 tests across 2 files (component interaction testing)
 
 ## Quick Start
 
 ### Installation
 
-Ensure you have pytest and coverage tools installed:
+Ensure you have the dev dependencies installed:
 
 ```bash
 # Using uv (recommended)
-uv pip install pytest pytest-cov pytest-asyncio
-
-# Using pip
-pip install pytest pytest-cov pytest-asyncio
+uv sync --dev
 ```
 
 ### Run All Tests
 
 ```bash
-pytest
-# or with verbose output
-pytest tests/ -v
+# Using the test script (recommended)
+./scripts/test.sh
+
+# Or directly with uv
+uv run pytest
+
+# Or with verbose output
+uv run pytest tests/ -v
 ```
+
+### Test Script (`scripts/test.sh`)
+
+The project includes a ready-to-use test script that runs the full suite with coverage:
+
+```bash
+#!/bin/bash
+set -e
+set -x
+
+uv run pytest \
+    --cov=src/mcp_server \
+    --cov-report=term-missing \
+    --cov-report=html \
+    --cov-report=xml \
+    --cov-fail-under=80 \
+    --cov-config=.coveragerc \
+    -v \
+    tests/ \
+    "${@}"
+```
+
+This script:
+- Runs all tests with verbose output
+- Generates coverage reports (terminal with missing lines, HTML, and XML)
+- Enforces a minimum 80% coverage threshold
+- Uses `.coveragerc` for coverage configuration
+- Passes any extra arguments through (e.g., `./scripts/test.sh -k "weather"`)
 
 ## Test Organization
 
@@ -64,18 +103,29 @@ Tests are organized using pytest markers defined in `pytest.ini`:
 
 ### Test Files
 
-#### Unit Tests
+#### Unit Tests (12 files, 90 tests)
 
-1. **test_models.py** - Tests for data models (ItineraryPreferences, Location, etc.)
-2. **test_elicitation.py** - Tests for preference elicitation utilities
-3. **test_weather_forecast.py** - Tests for weather forecast utilities
-4. **test_weather_resource.py** - Tests for weather resource handlers
-5. **test_travel_prompts.py** - Tests for travel prompt generation
+| File | Tests | Description |
+|------|------:|-------------|
+| `test_helpers.py` | 27 | Shared helpers: date formatting, day validation, temperature labels, auth permission/premium checks, request/context accessors, Auth0 userinfo HTTP client |
+| `test_weather_forecast.py` | 12 | Weather description from codes, time-of-day activity suggestions, fallback forecast structure |
+| `test_elicitation.py` | 9 | Trip-extension elicitation paths: accept, reject, cancel, unsupported, errors, ValueError propagation |
+| `test_travel_prompts.py` | 8 | Itinerary and weather-based activity prompt templates: structure, content, edge cases |
+| `test_server.py` | 7 | Server `main()` wiring: transports (stdio, HTTP, streamable HTTP, SSE, default), provider registration, rate limiting |
+| `test_models.py` | 6 | `ItineraryPreferences` model validation, defaults, day bounds, dict round-trip |
+| `test_auth_additional_tools.py` | 5 | Auth-related MCP tools: GitHub/Auth0 user info, custom auth message, request/session info |
+| `test_auth_provider.py` | 5 | `get_auth_provider` behavior: GitHub, Auth0, Clerk, case-insensitivity, unsupported provider errors |
+| `test_itinerary_service_extra.py` | 4 | Itinerary service activity suggestions by time of day and defaults |
+| `test_weather_resource.py` | 3 | Weather MCP resource handler: success, "today" shorthand, varying day counts |
+| `test_itinerary_tool_handler.py` | 2 | Itinerary tool handlers call service and return expected output shapes |
+| `test_travel_prompts_handler.py` | 2 | Prompt handler delegates to prompt template with correct parameters |
 
-#### Integration Tests
+#### Integration Tests (2 files, 13 tests)
 
-1. **test_itinerary_tool.py** - Tests for itinerary tool integration
-2. **test_weather_api.py** - Tests for weather API integration
+| File | Tests | Description |
+|------|------:|-------------|
+| `test_itinerary_tool.py` | 7 | End-to-end itinerary generation with elicitation, invalid dates, weather formatting, and activity suggestions |
+| `test_weather_api.py` | 6 | Open-Meteo weather client with mocked HTTP: success, errors, date parsing, range validation |
 
 ## Running Tests
 
@@ -83,91 +133,117 @@ Tests are organized using pytest markers defined in `pytest.ini`:
 
 ```bash
 # Run all tests
-pytest
+uv run pytest
 
 # Run with verbose output
-pytest -v
+uv run pytest -v
 
 # Run with extra verbose output
-pytest -vv
+uv run pytest -vv
 
 # Run quietly (minimal output)
-pytest -q
+uv run pytest -q
 ```
 
 ### Run Tests by Type
 
 ```bash
 # Unit tests only (fast, isolated)
-pytest tests/unit/ -v
-pytest -m unit
+uv run pytest tests/unit/ -v
+uv run pytest -m unit
 
 # Integration tests only (component interactions)
-pytest tests/integration/ -v
-pytest -m integration
+uv run pytest tests/integration/ -v
+uv run pytest -m integration
 
 # Exclude slow tests
-pytest -m "not slow"
+uv run pytest -m "not slow"
 ```
 
 ### Run Specific Tests
 
 ```bash
 # Single test file
-pytest tests/unit/test_models.py -v
+uv run pytest tests/unit/test_models.py -v
 
 # Multiple test files
-pytest tests/unit/test_models.py tests/unit/test_elicitation.py -v
+uv run pytest tests/unit/test_models.py tests/unit/test_helpers.py -v
 
 # Specific test class
-pytest tests/unit/test_models.py::TestItineraryPreferences -v
+uv run pytest tests/unit/test_models.py::TestItineraryPreferences -v
 
 # Specific test method
-pytest tests/unit/test_models.py::TestItineraryPreferences::test_valid_preferences -v
+uv run pytest tests/unit/test_helpers.py::TestFormatDate::test_format_date_standard -v
 
 # Pattern matching by keyword
-pytest -k "elicitation" -v
-pytest -k "weather and not api" -v
-pytest -k "test_valid and not cancelled"
+uv run pytest -k "elicitation" -v
+uv run pytest -k "weather and not api" -v
+uv run pytest -k "auth" -v
 ```
 
 ### Run Tests by Path Pattern
 
 ```bash
-pytest tests/unit/test_*.py
-pytest tests/**/test_weather*.py
+uv run pytest tests/unit/test_*.py
+uv run pytest tests/**/test_weather*.py
 ```
 
 ## Coverage
 
-### Basic Coverage Commands
+### Coverage Configuration
+
+The project uses a `.coveragerc` file to configure coverage collection:
+
+```ini
+[run]
+omit =
+    */tests/*
+    */__init__.py
+    */lib/*
+    */prompt_templates/*
+```
+
+### Using the Test Script
+
+The simplest way to run tests with coverage is via the test script:
+
+```bash
+# Full suite with coverage (enforces 80% minimum)
+./scripts/test.sh
+
+# Pass extra args to pytest
+./scripts/test.sh -k "weather"
+./scripts/test.sh tests/unit/ --maxfail=1
+```
+
+### Manual Coverage Commands
 
 ```bash
 # Run tests with coverage
-pytest --cov=src/mcp_server
+uv run pytest --cov=src/mcp_server
 
-# With terminal report
-pytest --cov=src/mcp_server --cov-report=term
+# With terminal report showing missing lines
+uv run pytest --cov=src/mcp_server --cov-report=term-missing
 
 # With HTML report (opens in browser)
-pytest --cov=src/mcp_server --cov-report=html
+uv run pytest --cov=src/mcp_server --cov-report=html
 open htmlcov/index.html
+
+# Enforce minimum coverage threshold
+uv run pytest --cov=src/mcp_server --cov-fail-under=80
 ```
 
 ### Detailed Coverage
 
 ```bash
-# Show missing lines in coverage report
-pytest --cov=src/mcp_server --cov-report=term-missing
-
 # Coverage for specific module
-pytest --cov=src/mcp_server.utils tests/unit/test_weather_forecast.py
+uv run pytest --cov=src/mcp_server.utils tests/unit/test_weather_forecast.py
 
 # Generate multiple report formats
-pytest --cov=src/mcp_server --cov-report=html --cov-report=xml --cov-report=term
+uv run pytest --cov=src/mcp_server --cov-report=html --cov-report=xml --cov-report=term-missing
 
-# Combine unit tests with coverage
-pytest tests/unit/ --cov=src/mcp_server --cov-report=term -v
+# Unit tests only with coverage
+uv run pytest tests/unit/ --cov=src/mcp_server --cov-report=term-missing -v
 ```
 
 ## Output Control
@@ -176,19 +252,19 @@ pytest tests/unit/ --cov=src/mcp_server --cov-report=term -v
 
 ```bash
 # Show test names
-pytest -v
+uv run pytest -v
 
 # Show more details
-pytest -vv
+uv run pytest -vv
 
 # Show print statements from tests
-pytest -s
+uv run pytest -s
 
 # Show local variables on failure
-pytest -l
+uv run pytest -l
 
 # Show captured log messages
-pytest --log-cli-level=INFO
+uv run pytest --log-cli-level=INFO
 ```
 
 ### Custom Log Configuration
@@ -204,36 +280,36 @@ The project's `pytest.ini` configures logging:
 
 ```bash
 # Stop on first failure
-pytest -x
-pytest --maxfail=1
+uv run pytest -x
+uv run pytest --maxfail=1
 
 # Stop after N failures
-pytest --maxfail=3
+uv run pytest --maxfail=3
 ```
 
 ### Rerun Failed Tests
 
 ```bash
 # Run only last failed tests
-pytest --lf
-pytest --last-failed
+uv run pytest --lf
+uv run pytest --last-failed
 
 # Run failed tests first, then continue with others
-pytest --ff
-pytest --failed-first
+uv run pytest --ff
+uv run pytest --failed-first
 ```
 
 ### PDB Debugging
 
 ```bash
 # Drop into debugger on failure
-pytest --pdb
+uv run pytest --pdb
 
 # Drop into debugger at start of each test
-pytest --trace
+uv run pytest --trace
 
 # Debug specific test with all output
-pytest tests/unit/test_models.py::TestItineraryPreferences::test_valid_preferences -vv -s --pdb
+uv run pytest tests/unit/test_helpers.py::TestFormatDate::test_format_date_standard -vv -s --pdb
 ```
 
 ## Performance
@@ -242,23 +318,23 @@ pytest tests/unit/test_models.py::TestItineraryPreferences::test_valid_preferenc
 
 ```bash
 # Auto-detect CPU count (requires pytest-xdist)
-pytest -n auto
+uv run pytest -n auto
 
 # Specific number of workers
-pytest -n 4
+uv run pytest -n 4
 
 # Parallel execution with coverage
-pytest -n auto --cov=src/mcp_server --cov-report=html
+uv run pytest -n auto --cov=src/mcp_server --cov-report=html
 ```
 
 ### Duration Reports
 
 ```bash
 # Show slowest 10 tests
-pytest --durations=10
+uv run pytest --durations=10
 
 # Show all test durations
-pytest --durations=0
+uv run pytest --durations=0
 ```
 
 ## Reporting
@@ -267,13 +343,13 @@ pytest --durations=0
 
 ```bash
 # JUnit XML report (for CI systems)
-pytest --junitxml=report.xml
+uv run pytest --junitxml=report.xml
 
 # JSON report (requires pytest-json-report)
-pytest --json-report --json-report-file=report.json
+uv run pytest --json-report --json-report-file=report.json
 
 # Multiple report formats
-pytest \
+uv run pytest \
   --cov=src/mcp_server \
   --cov-report=xml \
   --cov-report=term \
@@ -285,10 +361,10 @@ pytest \
 
 ```bash
 # List all available markers
-pytest --markers
+uv run pytest --markers
 
-# Run with strict marker checking (fails on unknown markers)
-pytest --strict-markers
+# Run with strict marker checking (enabled by default in pytest.ini)
+uv run pytest --strict-markers
 ```
 
 ## Common Workflows
@@ -297,37 +373,38 @@ pytest --strict-markers
 
 ```bash
 # Quick feedback: run related unit tests
-pytest tests/unit/test_models.py -v
+uv run pytest tests/unit/test_helpers.py -v
 
 # Debug with print statements
-pytest tests/unit/test_models.py -v -s
+uv run pytest tests/unit/test_models.py -v -s
 
 # Debug failing test with pdb
-pytest tests/unit/test_models.py::TestItineraryPreferences::test_custom_days --pdb -x
+uv run pytest tests/unit/test_elicitation.py::TestElicitTripExtension::test_accept -x --pdb
 ```
 
 ### Pre-Commit Check
 
 ```bash
-# Run all tests with coverage and stop on failures
-pytest --cov=src/mcp_server --cov-report=term-missing --maxfail=5
+# Run all tests with coverage, fail-fast, and minimum threshold
+./scripts/test.sh --maxfail=5
 ```
 
 ### Quick Sanity Check
 
 ```bash
 # Fast unit tests only, fail fast
-pytest tests/unit/ -v --maxfail=1
+uv run pytest tests/unit/ -v --maxfail=1
 ```
 
 ### Full Quality Check
 
 ```bash
 # Comprehensive test run with coverage and strict checks
-pytest \
+uv run pytest \
   --cov=src/mcp_server \
   --cov-report=html \
   --cov-report=term-missing \
+  --cov-fail-under=80 \
   --strict-markers \
   --maxfail=1 \
   -vv
@@ -337,10 +414,11 @@ pytest \
 
 ```bash
 # Full test suite optimized for CI
-pytest \
+uv run pytest \
   --cov=src/mcp_server \
   --cov-report=xml \
   --cov-report=term \
+  --cov-fail-under=80 \
   --junitxml=test-results.xml \
   --maxfail=1 \
   -v
@@ -352,7 +430,7 @@ For continuous testing during development:
 
 ```bash
 # Install pytest-watch
-pip install pytest-watch
+uv pip install pytest-watch
 
 # Run in watch mode
 ptw
@@ -367,25 +445,35 @@ ptw -- -v --maxfail=1
 
 The project includes a comprehensive `pytest.ini` configuration:
 
-- **Test Discovery**: Automatically finds `test_*.py` files
-- **Markers**: Custom markers for organizing tests
-- **Coverage**: Configured for the `src/mcp_server` package
+- **Test Discovery**: Automatically finds `test_*.py` files in `Test*` classes with `test_*` functions
+- **Markers**: Custom markers for organizing tests (`unit`, `integration`, `slow`, `skip_ci`)
+- **Strict Markers**: Enabled by default — unknown markers cause failures
 - **Asyncio**: Auto mode for async test support
-- **Warnings**: Error on warnings (except deprecated)
+- **Warnings**: Error on warnings (except deprecated and pending deprecated)
 - **Minimum Python**: 3.10
+- **Default Options**: `--strict-markers --verbose --tb=short --maxfail=10 -ra`
+- **Console Output**: Progress style
+
+### Coverage Configuration (.coveragerc)
+
+Coverage collection is configured to omit:
+- Test files (`*/tests/*`)
+- Init files (`*/__init__.py`)
+- Library files (`*/lib/*`)
+- Prompt templates (`*/prompt_templates/*`)
 
 ### Environment Variables
 
 ```bash
 # Use different config file
-pytest -c custom_pytest.ini
+uv run pytest -c custom_pytest.ini
 
 # Override config options
-pytest -o markers="custom: custom marker description"
+uv run pytest -o markers="custom: custom marker description"
 
 # Ensure module is importable
 export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
-pytest
+uv run pytest
 ```
 
 ## Writing Tests
@@ -400,9 +488,9 @@ Tests follow the AAA pattern:
 ### Using Fixtures
 
 Shared fixtures are available in:
-- `tests/conftest.py` - Project-wide fixtures
-- `tests/fixtures/context.py` - Context-related fixtures
-- `tests/fixtures/weather.py` - Weather-related fixtures
+- `tests/conftest.py` - Imports and re-exports all project fixtures
+- `tests/fixtures/context.py` - Mock MCP `Context` fixture
+- `tests/fixtures/weather.py` - Weather sample data and Open-Meteo-style response fixtures
 
 ### Example Test
 
@@ -411,15 +499,31 @@ import pytest
 from mcp_server.models import ItineraryPreferences
 
 @pytest.mark.unit
-def test_valid_preferences():
-    """Test creating valid itinerary preferences."""
-    prefs = ItineraryPreferences(
-        destination="Paris",
-        start_date="2024-06-01",
-        end_date="2024-06-07"
-    )
-    assert prefs.destination == "Paris"
-    assert prefs.days == 7
+class TestItineraryPreferences:
+    def test_valid_preferences(self):
+        """Test creating valid itinerary preferences."""
+        prefs = ItineraryPreferences(
+            destination="Paris",
+            start_date="2024-06-01",
+            end_date="2024-06-07"
+        )
+        assert prefs.destination == "Paris"
+        assert prefs.days == 7
+```
+
+### Example Async Test
+
+```python
+import pytest
+from unittest.mock import AsyncMock
+
+@pytest.mark.unit
+class TestWeatherResource:
+    @pytest.mark.asyncio
+    async def test_get_weather_success(self, mock_context):
+        """Test weather resource returns forecast data."""
+        result = await get_weather(uri="weather://London/3", ctx=mock_context)
+        assert "London" in result
 ```
 
 ## Best Practices
@@ -438,10 +542,10 @@ def test_valid_preferences():
 
 ### Tips for Effective Testing
 
-1. **Fast Feedback**: Start with `pytest tests/unit/ -x` for quick failures
-2. **Debugging**: Use `pytest --pdb -x` to debug first failure immediately
-3. **Coverage**: Use `pytest --cov=src --cov-report=html` for visual coverage analysis
-4. **CI**: Use `pytest --maxfail=1 -v` to fail fast in continuous integration
+1. **Fast Feedback**: Start with `uv run pytest tests/unit/ -x` for quick failures
+2. **Debugging**: Use `uv run pytest --pdb -x` to debug first failure immediately
+3. **Coverage**: Use `./scripts/test.sh` for full coverage with 80% enforcement
+4. **CI**: Use `uv run pytest --maxfail=1 -v` to fail fast in continuous integration
 5. **Development**: Use `ptw` (pytest-watch) for continuous testing during coding
 6. **Isolation**: Keep unit tests isolated and fast
 7. **Realistic**: Make integration tests reflect real-world usage
@@ -453,25 +557,25 @@ def test_valid_preferences():
 
 ```bash
 # Fast unit tests with coverage
-pytest tests/unit/ --cov=src/mcp_server --cov-report=term -v
+uv run pytest tests/unit/ --cov=src/mcp_server --cov-report=term-missing -v
 
 # Integration tests with detailed output
-pytest tests/integration/ -vv -s
+uv run pytest tests/integration/ -vv -s
 
 # All tests, stop on first failure, show coverage
-pytest --cov=src/mcp_server -x -v
+uv run pytest --cov=src/mcp_server -x -v
 
 # Parallel execution with coverage (faster)
-pytest -n auto --cov=src/mcp_server --cov-report=html
+uv run pytest -n auto --cov=src/mcp_server --cov-report=html
 
 # Debug specific test with full context
-pytest tests/unit/test_models.py::TestItineraryPreferences::test_valid_preferences -vv -s --pdb
+uv run pytest tests/unit/test_helpers.py::TestFormatDate -vv -s --pdb
 
-# Pre-commit: fast unit tests with coverage
-pytest tests/unit/ --cov=src/mcp_server --cov-report=term-missing -x
+# Pre-commit: full suite with coverage threshold
+./scripts/test.sh --maxfail=5
 
 # CI-ready: comprehensive test with reports
-pytest --cov=src/mcp_server --cov-report=xml --junitxml=results.xml -v --maxfail=1
+uv run pytest --cov=src/mcp_server --cov-report=xml --junitxml=results.xml --cov-fail-under=80 -v --maxfail=1
 ```
 
 ## Troubleshooting
@@ -482,7 +586,7 @@ pytest --cov=src/mcp_server --cov-report=xml --junitxml=results.xml -v --maxfail
 ```bash
 # Ensure src is in PYTHONPATH
 export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
-pytest
+uv run pytest
 ```
 
 **Async Tests Not Running**
@@ -490,13 +594,19 @@ pytest
 - Check `asyncio_mode = auto` in `pytest.ini`
 
 **Coverage Not Working**
-- Install `pytest-cov`: `pip install pytest-cov`
+- Install `pytest-cov`: `uv pip install pytest-cov`
 - Verify source path: `--cov=src/mcp_server`
+- Check `.coveragerc` omit patterns aren't excluding your code
+
+**Coverage Below 80%**
+- The test script enforces `--cov-fail-under=80`
+- Run `./scripts/test.sh` to see which lines are missing coverage
+- Check the HTML report: `open htmlcov/index.html`
 
 **Tests Running Slowly**
-- Run unit tests only: `pytest tests/unit/`
-- Use parallel execution: `pytest -n auto`
-- Profile slow tests: `pytest --durations=10`
+- Run unit tests only: `uv run pytest tests/unit/`
+- Use parallel execution: `uv run pytest -n auto`
+- Profile slow tests: `uv run pytest --durations=10`
 
 ## Additional Resources
 
@@ -508,33 +618,44 @@ pytest
 ## Test Statistics
 
 Current test suite statistics:
-- **Total Tests**: 54
-- **Unit Tests**: 39 (5 test files)
-- **Integration Tests**: 15 (2 test files)
-- **Fixture Modules**: 3 modules
-- **Test Markers**: 4 custom markers
+- **Total Tests**: 103
+- **Unit Tests**: 90 (12 test files)
+- **Integration Tests**: 13 (2 test files)
+- **Fixture Modules**: 2 modules (`context.py`, `weather.py`)
+- **Test Markers**: 4 custom markers (`unit`, `integration`, `slow`, `skip_ci`)
+- **Coverage Threshold**: 80% minimum
 
 ## Continuous Integration
 
-For CI/CD pipelines, use this configuration:
+For CI/CD pipelines, use the test script or configure directly:
 
 ```yaml
 # Example GitHub Actions configuration
 - name: Run Tests
   run: |
-    pytest \
+    ./scripts/test.sh
+```
+
+Or with explicit options:
+
+```yaml
+- name: Run Tests
+  run: |
+    uv run pytest \
       --cov=src/mcp_server \
       --cov-report=xml \
       --cov-report=term \
+      --cov-fail-under=80 \
+      --cov-config=.coveragerc \
       --junitxml=test-results.xml \
       --maxfail=1 \
       -v
 ```
 
 This will:
-- Run all tests with verbose output
-- Generate coverage reports (XML for CI integration)
+- Run all 103 tests with verbose output
+- Generate coverage reports (XML for CI integration, terminal for logs)
+- Enforce 80% minimum coverage threshold
+- Use `.coveragerc` to omit non-source files from coverage
 - Create JUnit XML for test result reporting
 - Fail fast on first error
-- Display results in CI logs
-

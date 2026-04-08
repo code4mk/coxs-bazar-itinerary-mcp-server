@@ -3,18 +3,25 @@ import pytest
 from unittest.mock import Mock, patch
 from mcp_server.utils.get_weather_forecast import get_weather_forecast
 
+WEATHER_MODULE = "mcp_server.utils.get_weather_forecast"
+
+
+def _mock_http_response(json_data, raise_for_status=None):
+    """Build a mock httpx-style response."""
+    resp = Mock()
+    resp.json.return_value = json_data
+    resp.raise_for_status = raise_for_status or Mock()
+    return resp
+
 
 @pytest.mark.integration
 class TestWeatherForecastAPI:
     """Test weather forecast API integration and error handling."""
     
-    @patch("mcp_server.utils.get_weather_forecast.requests.get")
-    def test_successful_forecast(self, mock_get, mock_open_meteo_response):
+    @patch(f"{WEATHER_MODULE}.open_meteo_client")
+    def test_successful_forecast(self, mock_client, mock_open_meteo_response):
         """Test successful weather forecast retrieval from API."""
-        mock_response = Mock()
-        mock_response.json.return_value = mock_open_meteo_response
-        mock_response.raise_for_status = Mock()
-        mock_get.return_value = mock_response
+        mock_client.get.return_value = _mock_http_response(mock_open_meteo_response)
         
         result = get_weather_forecast("2025-01-15", 3)
         
@@ -26,91 +33,74 @@ class TestWeatherForecastAPI:
         assert "temp_min" in result["forecast"][0]
         assert "temp_avg" in result["forecast"][0]
     
-    @patch("mcp_server.utils.get_weather_forecast.requests.get")
-    def test_api_error_response(self, mock_get):
+    @patch(f"{WEATHER_MODULE}.open_meteo_client")
+    def test_api_error_response(self, mock_client):
         """Test handling of API error responses."""
-        mock_response = Mock()
-        mock_response.json.return_value = {
+        mock_client.get.return_value = _mock_http_response({
             "error": True,
             "reason": "Invalid date range"
-        }
-        mock_response.raise_for_status = Mock()
-        mock_get.return_value = mock_response
+        })
         
         result = get_weather_forecast("2025-01-15", 3)
         
-        # Should fallback to mock data
         assert "note" in result or result["days"] == 3
     
-    @patch("mcp_server.utils.get_weather_forecast.requests.get")
-    def test_api_request_failure(self, mock_get):
+    @patch(f"{WEATHER_MODULE}.open_meteo_client")
+    def test_api_request_failure(self, mock_client):
         """Test handling of network failures."""
-        mock_get.side_effect = Exception("Network error")
+        mock_client.get.side_effect = Exception("Network error")
         
         result = get_weather_forecast("2025-01-15", 3)
         
-        # Should fallback to mock data
         assert result["days"] == 3
         assert len(result["forecast"]) == 3
     
-    def test_today_date_parsing(self):
+    @patch(f"{WEATHER_MODULE}.open_meteo_client")
+    def test_today_date_parsing(self, mock_client):
         """Test parsing 'today' as start date parameter."""
-        with patch("mcp_server.utils.get_weather_forecast.requests.get") as mock_get:
-            mock_response = Mock()
-            mock_response.json.return_value = {
-                "daily": {
-                    "time": ["2025-01-15"],
-                    "temperature_2m_max": [30.0],
-                    "temperature_2m_min": [25.0],
-                    "precipitation_sum": [0.0],
-                    "weathercode": [0],
-                    "windspeed_10m_max": [15.0],
-                    "sunrise": ["2025-01-15T06:00"],
-                    "sunset": ["2025-01-15T18:00"],
-                }
+        mock_client.get.return_value = _mock_http_response({
+            "daily": {
+                "time": ["2025-01-15"],
+                "temperature_2m_max": [30.0],
+                "temperature_2m_min": [25.0],
+                "precipitation_sum": [0.0],
+                "weathercode": [0],
+                "windspeed_10m_max": [15.0],
+                "sunrise": ["2025-01-15T06:00"],
+                "sunset": ["2025-01-15T18:00"],
             }
-            mock_response.raise_for_status = Mock()
-            mock_get.return_value = mock_response
-            
-            result = get_weather_forecast("today", 1)
-            assert result["days"] == 1
-    
-    def test_invalid_date_parsing(self):
-        """Test handling of invalid date formats."""
-        with patch("mcp_server.utils.get_weather_forecast.requests.get") as mock_get:
-            mock_response = Mock()
-            mock_response.json.return_value = {
-                "daily": {
-                    "time": ["2025-01-15"],
-                    "temperature_2m_max": [30.0],
-                    "temperature_2m_min": [25.0],
-                    "precipitation_sum": [0.0],
-                    "weathercode": [0],
-                    "windspeed_10m_max": [15.0],
-                    "sunrise": ["2025-01-15T06:00"],
-                    "sunset": ["2025-01-15T18:00"],
-                }
-            }
-            mock_response.raise_for_status = Mock()
-            mock_get.return_value = mock_response
-            
-            # Invalid date should default to today
-            result = get_weather_forecast("invalid-date", 1)
-            assert result["days"] == 1
-    
-    @patch("mcp_server.utils.get_weather_forecast.requests.get")
-    def test_forecast_date_range(self, mock_get, mock_open_meteo_response):
-        """Test forecast retrieval with different date ranges."""
-        mock_response = Mock()
-        mock_response.json.return_value = mock_open_meteo_response
-        mock_response.raise_for_status = Mock()
-        mock_get.return_value = mock_response
+        })
         
-        # Test 1 day
+        result = get_weather_forecast("today", 1)
+        assert result["days"] == 1
+    
+    @patch(f"{WEATHER_MODULE}.open_meteo_client")
+    def test_invalid_date_parsing(self, mock_client):
+        """Test handling of invalid date formats."""
+        mock_client.get.return_value = _mock_http_response({
+            "daily": {
+                "time": ["2025-01-15"],
+                "temperature_2m_max": [30.0],
+                "temperature_2m_min": [25.0],
+                "precipitation_sum": [0.0],
+                "weathercode": [0],
+                "windspeed_10m_max": [15.0],
+                "sunrise": ["2025-01-15T06:00"],
+                "sunset": ["2025-01-15T18:00"],
+            }
+        })
+        
+        result = get_weather_forecast("invalid-date", 1)
+        assert result["days"] == 1
+    
+    @patch(f"{WEATHER_MODULE}.open_meteo_client")
+    def test_forecast_date_range(self, mock_client, mock_open_meteo_response):
+        """Test forecast retrieval with different date ranges."""
+        mock_client.get.return_value = _mock_http_response(mock_open_meteo_response)
+        
         result = get_weather_forecast("2025-01-15", 1)
         assert result["days"] == 1
         
-        # Test 7 days
         mock_open_meteo_response["daily"]["time"] = [
             f"2025-01-{15+i}" for i in range(7)
         ]

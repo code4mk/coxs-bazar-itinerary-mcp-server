@@ -1,4 +1,5 @@
 """Unit tests for weather resource endpoint."""
+import json
 import pytest
 import sys
 from unittest.mock import patch
@@ -55,7 +56,7 @@ class TestWeatherResource:
             
             result = await func("2025-01-15", 3)
             
-            assert result == mock_data
+            assert json.loads(result) == mock_data
             mock_forecast.assert_called_once_with("2025-01-15", 3)
     
     @pytest.mark.asyncio
@@ -75,7 +76,7 @@ class TestWeatherResource:
             
             result = await func("today", 1)
             
-            assert result == mock_data
+            assert json.loads(result) == mock_data
             mock_forecast.assert_called_once_with("today", 1)
     
     @pytest.mark.asyncio
@@ -95,6 +96,6 @@ class TestWeatherResource:
             
             result = await func("2025-01-15", 7)
             
-            assert result["days"] == 7
+            assert json.loads(result)["days"] == 7
             mock_forecast.assert_called_once_with("2025-01-15", 7)
 
