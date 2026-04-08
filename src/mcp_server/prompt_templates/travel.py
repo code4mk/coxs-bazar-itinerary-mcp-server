@@ -1,18 +1,23 @@
-from typing import Dict, Any
+from typing import Any
+
 
 async def get_itinerary_prompt(days: int, start_date: str) -> str:
     """
     Full workflow: fetch daily temperatures + generate AI itinerary.
+
     Uses the registered MCP prompt 'generate_itinerary' for consistency.
-    
+
     Args:
         days: Number of days for the trip
         start_date: Start date (e.g., "2025-01-15", "15 Jan 2025", "today")
-    
+
     Returns:
         Formatted prompt for AI to generate detailed itinerary
+
     """
-    return f"""Generate a detailed {days}-day itinerary for Cox's Bazar, Bangladesh starting from {start_date}.
+    destination = "Cox's Bazar, Bangladesh"
+    return f"""Generate a detailed {days}-day itinerary \
+for {destination} starting from {start_date}.
 
 Consider the following in your itinerary:
 
@@ -56,23 +61,26 @@ Consider the following in your itinerary:
 Please create a day-by-day itinerary with specific timings, activities, and practical tips."""
 
 
-async def get_weather_based_activities_prompt(weather_data: Dict[str, Any]) -> str:
+async def get_weather_based_activities_prompt(weather_data: dict[str, Any]) -> str:
     """
     Generate activity suggestions based on weather forecast.
-    
+
     Args:
         weather_data: Weather forecast data
-    
+
     Returns:
         Formatted prompt with weather-based activity suggestions
+
     """
     forecast = weather_data.get("forecast", [])
-    
-    location = weather_data.get('location', 'Cox\'s Bazar')
-    days = weather_data.get('days', 0)
-    start_date = weather_data.get('start_date', 'N/A')
-    
-    prompt = f"""Based on the weather forecast for Cox's Bazar, suggest optimal activities for each day:
+
+    location = weather_data.get("location", "Cox's Bazar")
+    days = weather_data.get("days", 0)
+    start_date = weather_data.get("start_date", "N/A")
+
+    destination = "Cox's Bazar"
+    prompt = f"""Based on the weather forecast for {destination}, \
+suggest optimal activities for each day:
 
 Location: {location}
 Trip Duration: {days} days
@@ -80,26 +88,26 @@ Start Date: {start_date}
 
 Daily Weather Summary:
 """
-    
+
     for day in forecast:
-        day_num = day.get('day', 0)
-        date = day.get('date', 'N/A')
-        weather = day.get('weather', 'N/A')
-        temp_min = day.get('temp_min', 0)
-        temp_max = day.get('temp_max', 0)
-        temp_avg = day.get('temp_avg', 0)
-        precipitation = day.get('precipitation', 0)
-        windspeed = day.get('windspeed', 0)
-        sunrise = day.get('sunrise', 'N/A')
-        sunset = day.get('sunset', 'N/A')
-        
+        day_num = day.get("day", 0)
+        date = day.get("date", "N/A")
+        weather = day.get("weather", "N/A")
+        temp_min = day.get("temp_min", 0)
+        temp_max = day.get("temp_max", 0)
+        temp_avg = day.get("temp_avg", 0)
+        precipitation = day.get("precipitation", 0)
+        windspeed = day.get("windspeed", 0)
+        sunrise = day.get("sunrise", "N/A")
+        sunset = day.get("sunset", "N/A")
+
         prompt += f"\nDay {day_num} ({date}):\n"
         prompt += f"- Weather: {weather}\n"
         prompt += f"- Temperature: {temp_min}°C - {temp_max}°C (Avg: {temp_avg}°C)\n"
         prompt += f"- Precipitation: {precipitation}mm\n"
         prompt += f"- Wind Speed: {windspeed} km/h\n"
         prompt += f"- Sunrise: {sunrise} | Sunset: {sunset}\n"
-    
+
     prompt += """
 Based on this weather forecast, please provide:
 1. Best activities for each day considering the weather conditions
@@ -109,5 +117,5 @@ Based on this weather forecast, please provide:
 5. Photography opportunities (sunrise/sunset)
 6. Dining suggestions based on weather
 """
-    
+
     return prompt

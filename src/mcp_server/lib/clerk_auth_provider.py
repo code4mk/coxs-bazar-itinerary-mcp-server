@@ -1,4 +1,5 @@
-"""Clerk OAuth provider for FastMCP.
+"""
+Clerk OAuth provider for FastMCP.
 
 This module provides a complete Clerk OAuth integration that's ready to use
 with a Clerk domain, client ID, and client secret. It handles all the complexity
@@ -24,11 +25,13 @@ Example:
 
     mcp = FastMCP("My Protected Server", auth=auth)
     ```
+
 """
 
 from __future__ import annotations
 
 import contextlib
+from http import HTTPStatus
 from typing import Literal
 
 import httpx
@@ -45,7 +48,8 @@ logger = get_logger(__name__)
 
 
 class ClerkTokenVerifier(TokenVerifier):
-    """Token verifier for Clerk OAuth tokens.
+    """
+    Token verifier for Clerk OAuth tokens.
 
     Clerk issues standard OIDC tokens. Verification uses the introspection
     endpoint (RFC 7662) as the primary security gate — it confirms the token
@@ -68,8 +72,9 @@ class ClerkTokenVerifier(TokenVerifier):
         required_scopes: list[str] | None = None,
         timeout_seconds: int = 10,
         http_client: httpx.AsyncClient | None = None,
-    ):
-        """Initialize the Clerk token verifier.
+    ) -> None:
+        """
+        Initialize the Clerk token verifier.
 
         Args:
             domain: Clerk instance domain (e.g., "saving-primate-16.clerk.accounts.dev")
@@ -80,6 +85,7 @@ class ClerkTokenVerifier(TokenVerifier):
             http_client: Optional httpx.AsyncClient for connection pooling. When provided,
                 the client is reused across calls and the caller is responsible for its
                 lifecycle. When None (default), a fresh client is created per call.
+
         """
         super().__init__(required_scopes=required_scopes)
         self.domain = domain.rstrip("/")
@@ -92,7 +98,8 @@ class ClerkTokenVerifier(TokenVerifier):
         self._introspection_url = f"https://{self.domain}/oauth/token_info"
 
     async def verify_token(self, token: str) -> AccessToken | None:
-        """Verify a Clerk OAuth token via introspection and userinfo.
+        """
+        Verify a Clerk OAuth token via introspection and userinfo.
 
         Calls the introspection endpoint first to validate the token and
         retrieve auth metadata (active status, scopes, expiry, audience).
@@ -109,136 +116,144 @@ class ClerkTokenVerifier(TokenVerifier):
                 if self._http_client is not None
                 else httpx.AsyncClient(timeout=self.timeout_seconds)
             ) as client:
-                # Step 1: Validate token via introspection (RFC 7662).
-                # Security-critical checks (active, audience, scopes) come first.
-                introspect_data_payload: dict = {"token": token}
-                introspect_kwargs: dict = {
-                    "data": introspect_data_payload,
-                    "headers": {"User-Agent": "FastMCP-Clerk-OAuth"},
-                }
-
-                if self._client_id and self._client_secret:
-                    introspect_kwargs["auth"] = (
-                        self._client_id,
-                        self._client_secret,
-                    )
-                elif self._client_id:
-                    introspect_data_payload["client_id"] = self._client_id
-
-                introspect_response = await client.post(
-                    self._introspection_url,
-                    **introspect_kwargs,
-                )
-
-                if introspect_response.status_code != 200:
-                    logger.debug(
-                        "Clerk introspection failed: %d",
-                        introspect_response.status_code,
-                    )
+                introspect_data = await self._introspect(client, token)
+                if introspect_data is None:
                     return None
 
-                introspect_data = introspect_response.json()
-
-                # RFC 7662 requires the 'active' field in the response.
-                # A missing field indicates a malformed response — reject.
-                if "active" not in introspect_data or not introspect_data["active"]:
-                    logger.debug(
-                        "Clerk introspection: token inactive or missing 'active' field"
-                    )
+                if not self._validate_claims(introspect_data):
                     return None
 
-                scope_str = introspect_data.get("scope", "")
-                token_scopes = scope_str.split() if scope_str else []
+                user_data = await self._fetch_userinfo(client, token)
 
-                aud = introspect_data.get("aud") or introspect_data.get("client_id")
-
-                expires_at: int | None = None
-                exp = introspect_data.get("exp")
-                if exp is not None:
-                    with contextlib.suppress(ValueError, TypeError):
-                        expires_at = int(exp)
-
-                if self._client_id and aud != self._client_id:
-                    logger.debug(
-                        "Clerk token audience mismatch: got %s, expected %s",
-                        aud,
-                        self._client_id,
-                    )
-                    return None
-
-                if self.required_scopes:
-                    if not token_scopes:
-                        logger.debug(
-                            "Clerk token missing scope information; "
-                            "cannot verify required scopes %s",
-                            self.required_scopes,
-                        )
-                        return None
-                    token_scopes_set = set(token_scopes)
-                    required_scopes_set = set(self.required_scopes)
-                    if not required_scopes_set.issubset(token_scopes_set):
-                        logger.debug(
-                            "Clerk token missing required scopes. Has %s, needs %s",
-                            token_scopes_set,
-                            required_scopes_set,
-                        )
-                        return None
-
-                # Step 2: Fetch user profile via userinfo.
-                # Enriches the token with profile data (name, email, picture).
-                sub = introspect_data.get("sub")
-                user_data: dict = {}
-                try:
-                    userinfo_response = await client.get(
-                        self._userinfo_url,
-                        headers={
-                            "Authorization": f"Bearer {token}",
-                            "User-Agent": "FastMCP-Clerk-OAuth",
-                        },
-                    )
-                    if userinfo_response.status_code == 200:
-                        user_data = userinfo_response.json()
-                        if not sub:
-                            sub = user_data.get("sub")
-                except Exception as e:
-                    logger.debug("Clerk userinfo call failed: %s", e)
-
+                sub = introspect_data.get("sub") or user_data.get("sub")
                 if not sub:
                     logger.debug("Clerk token missing 'sub' claim")
                     return None
 
-                access_token = AccessToken(
-                    token=token,
-                    client_id=aud or sub,
-                    scopes=token_scopes,
-                    expires_at=expires_at,
-                    claims={
-                        "sub": sub,
-                        "aud": aud,
-                        "email": user_data.get("email"),
-                        "email_verified": user_data.get("email_verified"),
-                        "name": user_data.get("name"),
-                        "picture": user_data.get("picture"),
-                        "given_name": user_data.get("given_name"),
-                        "family_name": user_data.get("family_name"),
-                        "preferred_username": user_data.get("preferred_username"),
-                        "iss": user_data.get("iss"),
-                        "clerk_user_data": user_data or None,
-                    },
-                )
-                logger.debug("Clerk token verified successfully for sub=%s", sub)
-                return access_token
+                return self._build_access_token(token, introspect_data, user_data, sub)
 
         except httpx.RequestError as e:
             logger.debug("Failed to verify Clerk token: %s", e)
             return None
-        except Exception as e:
-            logger.debug("Clerk token verification error: %s", e)
+
+    async def _introspect(self, client: httpx.AsyncClient, token: str) -> dict | None:
+        """Send token introspection request (RFC 7662) and validate active status."""
+        data_payload: dict = {"token": token}
+        kwargs: dict = {
+            "data": data_payload,
+            "headers": {"User-Agent": "FastMCP-Clerk-OAuth"},
+        }
+
+        if self._client_id and self._client_secret:
+            kwargs["auth"] = (self._client_id, self._client_secret)
+        elif self._client_id:
+            data_payload["client_id"] = self._client_id
+
+        response = await client.post(self._introspection_url, **kwargs)
+
+        if response.status_code != HTTPStatus.OK:
+            logger.debug("Clerk introspection failed: %d", response.status_code)
             return None
+
+        data = response.json()
+
+        if "active" not in data or not data["active"]:
+            logger.debug("Clerk introspection: token inactive or missing 'active' field")
+            return None
+
+        return data
+
+    def _validate_claims(self, introspect_data: dict) -> bool:
+        """Validate audience and scope claims from introspection data."""
+        aud = introspect_data.get("aud") or introspect_data.get("client_id")
+
+        if self._client_id and aud != self._client_id:
+            logger.debug(
+                "Clerk token audience mismatch: got %s, expected %s",
+                aud,
+                self._client_id,
+            )
+            return False
+
+        if self.required_scopes:
+            scope_str = introspect_data.get("scope", "")
+            token_scopes = scope_str.split() if scope_str else []
+            if not token_scopes:
+                logger.debug(
+                    "Clerk token missing scope information; cannot verify required scopes %s",
+                    self.required_scopes,
+                )
+                return False
+            if not set(self.required_scopes).issubset(set(token_scopes)):
+                logger.debug(
+                    "Clerk token missing required scopes. Has %s, needs %s",
+                    set(token_scopes),
+                    set(self.required_scopes),
+                )
+                return False
+
+        return True
+
+    async def _fetch_userinfo(self, client: httpx.AsyncClient, token: str) -> dict:
+        """Fetch user profile from userinfo endpoint. Returns empty dict on failure."""
+        try:
+            response = await client.get(
+                self._userinfo_url,
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "User-Agent": "FastMCP-Clerk-OAuth",
+                },
+            )
+            if response.status_code == HTTPStatus.OK:
+                return response.json()
+        except (httpx.RequestError, ValueError) as e:
+            logger.debug("Clerk userinfo call failed: %s", e)
+        return {}
+
+    def _build_access_token(
+        self,
+        token: str,
+        introspect_data: dict,
+        user_data: dict,
+        sub: str,
+    ) -> AccessToken:
+        """Construct an AccessToken from introspection and userinfo data."""
+        scope_str = introspect_data.get("scope", "")
+        token_scopes = scope_str.split() if scope_str else []
+        aud = introspect_data.get("aud") or introspect_data.get("client_id")
+
+        expires_at: int | None = None
+        exp = introspect_data.get("exp")
+        if exp is not None:
+            with contextlib.suppress(ValueError, TypeError):
+                expires_at = int(exp)
+
+        access_token = AccessToken(
+            token=token,
+            client_id=aud or sub,
+            scopes=token_scopes,
+            expires_at=expires_at,
+            claims={
+                "sub": sub,
+                "aud": aud,
+                "email": user_data.get("email"),
+                "email_verified": user_data.get("email_verified"),
+                "name": user_data.get("name"),
+                "picture": user_data.get("picture"),
+                "given_name": user_data.get("given_name"),
+                "family_name": user_data.get("family_name"),
+                "preferred_username": user_data.get("preferred_username"),
+                "iss": user_data.get("iss"),
+                "clerk_user_data": user_data or None,
+            },
+        )
+        logger.debug("Clerk token verified successfully for sub=%s", sub)
+        return access_token
 
 
 class ClerkProvider(OAuthProxy):
-    """Complete Clerk OAuth provider for FastMCP.
+    """
+    Complete Clerk OAuth provider for FastMCP.
 
     This provider makes it trivial to add Clerk OAuth protection to any
     FastMCP server. Provide your Clerk instance domain, OAuth app credentials,
@@ -268,6 +283,7 @@ class ClerkProvider(OAuthProxy):
 
         mcp = FastMCP("My App", auth=auth)
         ```
+
     """
 
     def __init__(
@@ -290,8 +306,9 @@ class ClerkProvider(OAuthProxy):
         extra_authorize_params: dict[str, str] | None = None,
         http_client: httpx.AsyncClient | None = None,
         enable_cimd: bool = True,
-    ):
-        """Initialize Clerk OAuth provider.
+    ) -> None:
+        """
+        Initialize Clerk OAuth provider.
 
         Args:
             domain: Clerk instance domain (e.g., "saving-primate-16.clerk.accounts.dev").
@@ -302,34 +319,48 @@ class ClerkProvider(OAuthProxy):
             base_url: Public URL where OAuth endpoints will be accessible (includes any mount path)
             issuer_url: Issuer URL for OAuth metadata (defaults to base_url). Use root-level URL
                 to avoid 404s during discovery when mounting under a path.
-            redirect_path: Redirect path configured in Clerk OAuth app (defaults to "/auth/callback")
-            required_scopes: Required Clerk scopes (defaults to ["openid", "email", "profile"]).
-                Clerk supports: "openid", "email", "profile", "public_metadata",
-                "private_metadata", "offline_access".
-            valid_scopes: All scopes that clients are allowed to request, advertised through
-                well-known endpoints. Defaults to required_scopes if not provided.
-            timeout_seconds: HTTP request timeout for Clerk API calls (defaults to 10)
-            allowed_client_redirect_uris: List of allowed redirect URI patterns for MCP clients.
-                If None (default), all URIs are allowed. If empty list, no URIs are allowed.
-            client_storage: Storage backend for OAuth state (client registrations, encrypted tokens).
-                If None, an encrypted file store will be created in the data directory
+            redirect_path: Redirect path configured in Clerk OAuth app
+                (defaults to "/auth/callback")
+            required_scopes: Required Clerk scopes
+                (defaults to ["openid", "email", "profile"]).
+                Clerk supports: "openid", "email", "profile",
+                "public_metadata", "private_metadata", "offline_access".
+            valid_scopes: All scopes that clients are allowed to request,
+                advertised through well-known endpoints.
+                Defaults to required_scopes if not provided.
+            timeout_seconds: HTTP request timeout for Clerk API calls
+                (defaults to 10)
+            allowed_client_redirect_uris: List of allowed redirect URI
+                patterns for MCP clients. If None (default), all URIs
+                are allowed. If empty list, no URIs are allowed.
+            client_storage: Storage backend for OAuth state (client
+                registrations, encrypted tokens). If None, an encrypted
+                file store will be created in the data directory
                 (derived from ``platformdirs``).
-            jwt_signing_key: Secret for signing FastMCP JWT tokens (any string or bytes). If bytes
-                are provided, they will be used as is. If a string is provided, it will be derived
-                into a 32-byte key. If not provided, the upstream client secret will be used to
-                derive a 32-byte key using PBKDF2.
-            require_authorization_consent: Whether to require user consent before authorizing
-                clients (default True). When "external", the built-in consent screen is skipped
-                but no warning is logged, indicating that consent is handled externally by Clerk.
+            jwt_signing_key: Secret for signing FastMCP JWT tokens
+                (any string or bytes). If bytes are provided, they
+                will be used as is. If a string is provided, it will
+                be derived into a 32-byte key. If not provided, the
+                upstream client secret will be used to derive a
+                32-byte key using PBKDF2.
+            require_authorization_consent: Whether to require user
+                consent before authorizing clients (default True).
+                When "external", the built-in consent screen is skipped
+                but no warning is logged, indicating that consent is
+                handled externally by Clerk.
             consent_csp_policy: Custom CSP policy for the consent page.
-            extra_authorize_params: Additional parameters to forward to Clerk's authorization
-                endpoint. Example: {"prompt": "login"} to force re-authentication.
-            http_client: Optional httpx.AsyncClient for connection pooling in token verification.
-                When provided, the client is reused across verify_token calls and the caller
-                is responsible for its lifecycle. When None (default), a fresh client is created
-                per call.
-            enable_cimd: Enable CIMD (Client ID Metadata Document) support for URL-based
-                client IDs (default True). Set to False to disable.
+            extra_authorize_params: Additional parameters to forward to
+                Clerk's authorization endpoint.
+                Example: {"prompt": "login"} to force re-authentication.
+            http_client: Optional httpx.AsyncClient for connection
+                pooling in token verification. When provided, the client
+                is reused across verify_token calls and the caller is
+                responsible for its lifecycle. When None (default), a
+                fresh client is created per call.
+            enable_cimd: Enable CIMD (Client ID Metadata Document)
+                support for URL-based client IDs (default True).
+                Set to False to disable.
+
         """
         domain = domain.rstrip("/")
 
@@ -339,9 +370,7 @@ class ClerkProvider(OAuthProxy):
             else ["openid", "email", "profile"]
         )
 
-        parsed_valid_scopes = (
-            parse_scopes(valid_scopes) if valid_scopes is not None else None
-        )
+        parsed_valid_scopes = parse_scopes(valid_scopes) if valid_scopes is not None else None
 
         token_verifier = ClerkTokenVerifier(
             domain=domain,
@@ -357,8 +386,8 @@ class ClerkProvider(OAuthProxy):
         )
 
         super().__init__(
-            upstream_authorization_endpoint=f"https://{domain}/oauth/authorize",
-            upstream_token_endpoint=f"https://{domain}/oauth/token",
+            upstream_authorization_endpoint=(f"https://{domain}/oauth/authorize"),
+            upstream_token_endpoint=(f"https://{domain}/oauth/token"),
             upstream_client_id=client_id,
             upstream_client_secret=client_secret,
             token_verifier=token_verifier,

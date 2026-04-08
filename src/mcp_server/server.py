@@ -1,4 +1,5 @@
 """Main FastMCP server for Cox's Bazar AI Itinerary."""
+
 import sys
 import os
 from pathlib import Path
@@ -15,40 +16,43 @@ from mcp_server.mcp_instance import mcp
 
 from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
 
-#from fastmcp.server.middleware import AuthMiddleware
-#from fastmcp.server.auth import require_auth
+# from fastmcp.server.middleware import AuthMiddleware
+# from fastmcp.server.auth import require_auth
 
 
 load_dotenv()
 
 
-def main():
+def main() -> None:
     """Run the MCP server."""
     transport_name = os.environ.get("TRANSPORT_NAME") or "stdio"
     server_port = int(os.environ.get("SERVER_PORT") or 8000)
-    server_host = os.environ.get("SERVER_HOST") or "0.0.0.0"
+    server_host = os.environ.get("SERVER_HOST") or "0.0.0.0"  # noqa: S104
 
-    #Auto-register all MCP handlers (tools, prompts, resources, custom routes)
+    # Auto-register all MCP handlers (tools, prompts, resources, custom routes)
     handlers_dir = Path(__file__).parent / "handlers"
     custom_routes_dir = Path(__file__).parent / "config" / "custom_routes.py"
     mcp.providers.append(FileSystemProvider(handlers_dir))
     mcp.providers.append(FileSystemProvider(custom_routes_dir))
 
+    mcp.add_middleware(
+        RateLimitingMiddleware(
+            max_requests_per_second=10.0,
+            burst_capacity=20,
+            get_client_id=lambda ctx: (
+                ctx.fastmcp_context.session_id if ctx.fastmcp_context else "unknown"
+            ),
+        )
+    )
 
-    mcp.add_middleware(RateLimitingMiddleware(
-        max_requests_per_second=10.0,
-        burst_capacity=20,
-        get_client_id=lambda ctx: ctx.fastmcp_context.session_id if ctx.fastmcp_context else "unknown"
-    ))
-
-    
     # global auth middleware
-    #mcp.middleware.append(AuthMiddleware(auth=require_auth))
+    # mcp.middleware.append(AuthMiddleware(auth=require_auth))
 
-    if transport_name == "http" or transport_name == "streamable-http" or transport_name == "sse":
+    if transport_name in ("http", "streamable-http", "sse"):
         mcp.run(transport=transport_name, port=server_port, host=server_host)
     else:
         mcp.run(transport=transport_name)
-    
+
+
 if __name__ == "__main__":
     main()

@@ -6,75 +6,71 @@ from fastmcp.server.auth.providers.github import GitHubProvider
 from fastmcp.server.auth.providers.auth0 import Auth0Provider
 from mcp_server.lib.clerk_auth_provider import ClerkProvider
 
-def get_client_storage():
-  """Get the client storage."""
-  return FernetEncryptionWrapper(
-    key_value=RedisStore(
-      host=os.environ["REDIS_HOST"],
-      port=int(os.environ["REDIS_PORT"]),
-      password=os.environ.get("REDIS_PASSWORD"),
-    ),
-    fernet=Fernet(os.environ["STORAGE_ENCRYPTION_KEY"])
-  )
 
-def get_auth_provider(provider_name: str):
-  """Get the auth provider based on the provider name."""
-  if provider_name.lower() == "github":
-
-    # Get GitHub configuration
-    github_client_id = os.getenv("GITHUB_CLIENT_ID")
-    github_client_secret = os.getenv("GITHUB_CLIENT_SECRET")
-    base_url = os.getenv("RESOURCE_BASE_URL", "http://localhost:8000")    
-    client_storage = get_client_storage()
-
-    return GitHubProvider(
-      client_id=github_client_id,
-      client_secret=github_client_secret,
-      base_url=base_url,
-
-      # Production token management
-      jwt_signing_key=os.environ["JWT_SIGNING_KEY"],
-      client_storage=client_storage
+def get_client_storage() -> FernetEncryptionWrapper:
+    """Get the client storage."""
+    return FernetEncryptionWrapper(
+        key_value=RedisStore(
+            host=os.environ["REDIS_HOST"],
+            port=int(os.environ["REDIS_PORT"]),
+            password=os.environ.get("REDIS_PASSWORD"),
+        ),
+        fernet=Fernet(os.environ["STORAGE_ENCRYPTION_KEY"]),
     )
-  elif provider_name.lower() == "auth0":
 
-    auth0_domain = os.getenv("AUTH0_DOMAIN")
-    auth0_client_id = os.getenv("AUTH0_CLIENT_ID")
-    auth0_client_secret = os.getenv("AUTH0_CLIENT_SECRET")
-    auth0_audience = os.getenv("AUTH0_AUDIENCE")
-    base_url = os.getenv("RESOURCE_BASE_URL", "http://localhost:8000")
-    client_storage = get_client_storage()
 
-    auth0_config_url = f"https://{auth0_domain}/.well-known/openid-configuration"
+def get_auth_provider(provider_name: str) -> GitHubProvider | Auth0Provider | ClerkProvider:
+    """Get the auth provider based on the provider name."""
+    if provider_name.lower() == "github":
+        # Get GitHub configuration
+        github_client_id = os.getenv("GITHUB_CLIENT_ID")
+        github_client_secret = os.getenv("GITHUB_CLIENT_SECRET")
+        base_url = os.getenv("RESOURCE_BASE_URL", "http://localhost:8000")
+        client_storage = get_client_storage()
 
-    return Auth0Provider(
-      config_url=auth0_config_url,
-      client_id=auth0_client_id,
-      client_secret=auth0_client_secret,
-      audience=auth0_audience,
-      base_url=base_url,
-      required_scopes=["openid", "profile", "email"],
+        return GitHubProvider(
+            client_id=github_client_id,
+            client_secret=github_client_secret,
+            base_url=base_url,
+            # Production token management
+            jwt_signing_key=os.environ["JWT_SIGNING_KEY"],
+            client_storage=client_storage,
+        )
+    if provider_name.lower() == "auth0":
+        auth0_domain = os.getenv("AUTH0_DOMAIN")
+        auth0_client_id = os.getenv("AUTH0_CLIENT_ID")
+        auth0_client_secret = os.getenv("AUTH0_CLIENT_SECRET")
+        auth0_audience = os.getenv("AUTH0_AUDIENCE")
+        base_url = os.getenv("RESOURCE_BASE_URL", "http://localhost:8000")
+        client_storage = get_client_storage()
 
-      jwt_signing_key=os.environ["JWT_SIGNING_KEY"],
-      client_storage=client_storage
-    )
-  elif provider_name.lower() == "clerk":
+        auth0_config_url = f"https://{auth0_domain}/.well-known/openid-configuration"
 
-    clerk_domain = os.getenv("CLERK_DOMAIN")
-    clerk_client_id = os.getenv("CLERK_CLIENT_ID")
-    clerk_client_secret = os.getenv("CLERK_CLIENT_SECRET")
-    base_url = os.getenv("RESOURCE_BASE_URL", "http://localhost:8000")
-    client_storage = get_client_storage()
+        return Auth0Provider(
+            config_url=auth0_config_url,
+            client_id=auth0_client_id,
+            client_secret=auth0_client_secret,
+            audience=auth0_audience,
+            base_url=base_url,
+            required_scopes=["openid", "profile", "email"],
+            jwt_signing_key=os.environ["JWT_SIGNING_KEY"],
+            client_storage=client_storage,
+        )
+    if provider_name.lower() == "clerk":
+        clerk_domain = os.getenv("CLERK_DOMAIN")
+        clerk_client_id = os.getenv("CLERK_CLIENT_ID")
+        clerk_client_secret = os.getenv("CLERK_CLIENT_SECRET")
+        base_url = os.getenv("RESOURCE_BASE_URL", "http://localhost:8000")
+        client_storage = get_client_storage()
 
-    return ClerkProvider(
-      domain=clerk_domain,
-      client_id=clerk_client_id,
-      client_secret=clerk_client_secret,
-      base_url=base_url,
-      required_scopes=["openid", "email", "profile"],
-
-      jwt_signing_key=os.environ["JWT_SIGNING_KEY"],
-      client_storage=client_storage,
-    )
-  else:
-    raise ValueError(f"Unsupported provider: {provider_name}")
+        return ClerkProvider(
+            domain=clerk_domain,
+            client_id=clerk_client_id,
+            client_secret=clerk_client_secret,
+            base_url=base_url,
+            required_scopes=["openid", "email", "profile"],
+            jwt_signing_key=os.environ["JWT_SIGNING_KEY"],
+            client_storage=client_storage,
+        )
+    msg = f"Unsupported provider: {provider_name}"
+    raise ValueError(msg)

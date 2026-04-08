@@ -1,0 +1,77 @@
+# Line length configuration
+line-length = 100
+indent-width = 4
+
+# Assume Python 3.12+
+target-version = "py312"
+
+# Exclude files and directories
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+    "scripts",
+    "tests",
+    "alembic"
+]
+
+[lint]
+# Enable all rules by default
+select = ["ALL"]
+
+# Exclude specific rules
+ignore = [
+    "D203",  # 1 blank line required before class docstring
+    "D212",  # Multi-line docstring summary should start at the first line
+    "D100",  # Missing docstring in public module
+    "PLR0913",  # Too many arguments to function call
+    "I001",  # Unsorted imports
+    "TC002",  # Move third-party imports to a separate group
+    "ARG002",  # Unused method argument
+    "TD002",  # Missing author in TODO
+    "TD003",  # Missing issue link in TODO
+    "FIX002",  # Line contains TODO, consider resolving the issue
+    "COM812",  # Missing trailing comma in Python 3.6+
+    "N805",    # Instance method first argument name should be 'self'
+    "ERA001",  # Found commented-out code
+    "FAST002", # FastAPI dependency injection error annotation
+    "B008",    # Do not perform function call in argument defaults
+    "RET504",
+    "F841",  # Unused variable
+    "ARG001",  # Unused argument
+    "S603",    # Subprocess call with non-literal input
+]
+
+# Allow unused variables when underscore-prefixed
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+# Allow fix for all enabled rules
+fixable = ["ALL"]
+unfixable = []
+
+[format]
+quote-style = "double"
+indent-style = "space"
+
+[lint.per-file-ignores]
+"__init__.py" = ["F401"]  # Ignore unused imports in __init__.py files
+"tests/**/*.py" = ["S101", "PLR2004"]  # Use of assert detected, Magic value used in comparison
+"src/mcp_server/lib/httpx_client.py" = ["ANN401"]  # Any types needed for pass-through HTTP wrapper

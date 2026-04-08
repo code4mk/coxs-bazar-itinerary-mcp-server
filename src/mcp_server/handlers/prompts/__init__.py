@@ -1,2 +1,1 @@
-
-
+"""Prompt handler registrations."""
