@@ -20,6 +20,7 @@ dependencies = [
 [project.scripts]
 mcp-server = "mcp_server.server:main"
 mcp-server-dev = "mcp_server.cli:dev"
+mcp-inspector = "mcp_server.cli:mcp_inspector"
 lint = "mcp_server.cli:lint"
 pre-commit-install = "mcp_server.cli:pre_commit_install"
 

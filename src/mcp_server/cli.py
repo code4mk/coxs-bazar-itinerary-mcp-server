@@ -50,6 +50,28 @@ def lint() -> None:
         sys.exit(1)
 
 
+def mcp_inspector() -> None:
+    """Launch the MCP Inspector UI."""
+    project_root = Path(__file__).parent.parent.parent
+
+    print("Starting MCP Inspector...")  # noqa: T201
+    try:
+        subprocess.run(
+            ["npx", "@modelcontextprotocol/inspector"],  # noqa: S607
+            cwd=project_root,
+            check=True,
+            text=True,
+        )
+    except subprocess.CalledProcessError:
+        sys.exit(1)
+    except FileNotFoundError:
+        print(  # noqa: T201
+            "ERROR: 'npx' not found. Please ensure Node.js is installed.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+
 def pre_commit_install() -> None:
     """Install pre-commit hooks into the git repository."""
     project_root = Path(__file__).parent.parent.parent
