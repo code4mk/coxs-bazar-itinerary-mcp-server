@@ -12,14 +12,13 @@ class TestGetAuthProvider:
 
     @patch(f"{AUTH_MODULE}.get_client_storage")
     @patch(f"{AUTH_MODULE}.GitHubProvider")
-    @patch.dict("os.environ", {
-        "GITHUB_CLIENT_ID": "gh-id",
-        "GITHUB_CLIENT_SECRET": "gh-secret",
-        "RESOURCE_BASE_URL": "http://localhost:8000",
-        "JWT_SIGNING_KEY": "test-jwt-key",
-    })
-    def test_github_provider(self, mock_github_cls, mock_storage):
+    @patch(f"{AUTH_MODULE}.settings")
+    def test_github_provider(self, mock_settings, mock_github_cls, mock_storage):
         from mcp_server.config.auth_provider import get_auth_provider
+        mock_settings.github_client_id = "gh-id"
+        mock_settings.github_client_secret = "gh-secret"
+        mock_settings.resource_base_url = "http://localhost:8000"
+        mock_settings.jwt_signing_key = "test-jwt-key"
         mock_storage.return_value = Mock()
 
         result = get_auth_provider("github")
@@ -32,13 +31,13 @@ class TestGetAuthProvider:
 
     @patch(f"{AUTH_MODULE}.get_client_storage")
     @patch(f"{AUTH_MODULE}.GitHubProvider")
-    @patch.dict("os.environ", {
-        "GITHUB_CLIENT_ID": "gh-id",
-        "GITHUB_CLIENT_SECRET": "gh-secret",
-        "JWT_SIGNING_KEY": "test-jwt-key",
-    })
-    def test_github_provider_case_insensitive(self, mock_github_cls, mock_storage):
+    @patch(f"{AUTH_MODULE}.settings")
+    def test_github_provider_case_insensitive(self, mock_settings, mock_github_cls, mock_storage):
         from mcp_server.config.auth_provider import get_auth_provider
+        mock_settings.github_client_id = "gh-id"
+        mock_settings.github_client_secret = "gh-secret"
+        mock_settings.resource_base_url = "http://localhost:8000"
+        mock_settings.jwt_signing_key = "test-jwt-key"
         mock_storage.return_value = Mock()
 
         get_auth_provider("GitHub")
@@ -46,16 +45,15 @@ class TestGetAuthProvider:
 
     @patch(f"{AUTH_MODULE}.get_client_storage")
     @patch(f"{AUTH_MODULE}.Auth0Provider")
-    @patch.dict("os.environ", {
-        "AUTH0_DOMAIN": "test.auth0.com",
-        "AUTH0_CLIENT_ID": "auth0-id",
-        "AUTH0_CLIENT_SECRET": "auth0-secret",
-        "AUTH0_AUDIENCE": "https://api.test.com",
-        "RESOURCE_BASE_URL": "http://localhost:8000",
-        "JWT_SIGNING_KEY": "test-jwt-key",
-    })
-    def test_auth0_provider(self, mock_auth0_cls, mock_storage):
+    @patch(f"{AUTH_MODULE}.settings")
+    def test_auth0_provider(self, mock_settings, mock_auth0_cls, mock_storage):
         from mcp_server.config.auth_provider import get_auth_provider
+        mock_settings.auth0_domain = "test.auth0.com"
+        mock_settings.auth0_client_id = "auth0-id"
+        mock_settings.auth0_client_secret = "auth0-secret"
+        mock_settings.auth0_audience = "https://api.test.com"
+        mock_settings.resource_base_url = "http://localhost:8000"
+        mock_settings.jwt_signing_key = "test-jwt-key"
         mock_storage.return_value = Mock()
 
         result = get_auth_provider("auth0")
@@ -70,15 +68,14 @@ class TestGetAuthProvider:
 
     @patch(f"{AUTH_MODULE}.get_client_storage")
     @patch(f"{AUTH_MODULE}.ClerkProvider")
-    @patch.dict("os.environ", {
-        "CLERK_DOMAIN": "test.clerk.dev",
-        "CLERK_CLIENT_ID": "clerk-id",
-        "CLERK_CLIENT_SECRET": "clerk-secret",
-        "RESOURCE_BASE_URL": "http://localhost:8000",
-        "JWT_SIGNING_KEY": "test-jwt-key",
-    })
-    def test_clerk_provider(self, mock_clerk_cls, mock_storage):
+    @patch(f"{AUTH_MODULE}.settings")
+    def test_clerk_provider(self, mock_settings, mock_clerk_cls, mock_storage):
         from mcp_server.config.auth_provider import get_auth_provider
+        mock_settings.clerk_domain = "test.clerk.dev"
+        mock_settings.clerk_client_id = "clerk-id"
+        mock_settings.clerk_client_secret = "clerk-secret"
+        mock_settings.resource_base_url = "http://localhost:8000"
+        mock_settings.jwt_signing_key = "test-jwt-key"
         mock_storage.return_value = Mock()
 
         result = get_auth_provider("clerk")

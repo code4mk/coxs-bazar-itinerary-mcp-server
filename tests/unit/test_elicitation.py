@@ -27,8 +27,8 @@ class TestElicitTripExtension:
         mock_result = Mock()
         mock_result.action = "accept"
         mock_result.data = Mock(spec=ItineraryPreferences)
-        mock_result.data.extendTrip = True
-        mock_result.data.newDays = 3
+        mock_result.data.extend_trip = True
+        mock_result.data.new_days = 3
         
         mock_context.elicit.return_value = mock_result
         
@@ -47,8 +47,8 @@ class TestElicitTripExtension:
         mock_result = Mock()
         mock_result.action = "accept"
         mock_result.data = Mock(spec=ItineraryPreferences)
-        mock_result.data.extendTrip = True
-        mock_result.data.newDays = 1  # Below minimum
+        mock_result.data.extend_trip = True
+        mock_result.data.new_days = 1  # Below minimum
         
         mock_context.elicit.return_value = mock_result
         
@@ -66,7 +66,7 @@ class TestElicitTripExtension:
         mock_result = Mock()
         mock_result.action = "accept"
         mock_result.data = Mock(spec=ItineraryPreferences)
-        mock_result.data.extendTrip = False
+        mock_result.data.extend_trip = False
         
         mock_context.elicit.return_value = mock_result
         

@@ -1,7 +1,6 @@
 """Main FastMCP server for Cox's Bazar AI Itinerary."""
 
 import sys
-import os
 from pathlib import Path
 
 # Add src directory to path if running directly
@@ -13,9 +12,9 @@ if __name__ == "__main__" or "mcp_server" not in sys.modules:
 from dotenv import load_dotenv
 from fastmcp.server.providers import FileSystemProvider
 from mcp_server.mcp_instance import mcp
+from mcp_server.config.settings import settings
 
 from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
-
 # from fastmcp.server.middleware import AuthMiddleware
 # from fastmcp.server.auth import require_auth
 
@@ -25,9 +24,9 @@ load_dotenv()
 
 def main() -> None:
     """Run the MCP server."""
-    transport_name = os.environ.get("TRANSPORT_NAME") or "stdio"
-    server_port = int(os.environ.get("SERVER_PORT") or 8000)
-    server_host = os.environ.get("SERVER_HOST") or "0.0.0.0"  # noqa: S104
+    transport_name = settings.transport_name
+    server_port = settings.server_port
+    server_host = settings.server_host
 
     # Auto-register all MCP handlers (tools, prompts, resources, custom routes)
     handlers_dir = Path(__file__).parent / "handlers"

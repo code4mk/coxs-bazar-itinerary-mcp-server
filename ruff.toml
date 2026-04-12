@@ -58,6 +58,7 @@ ignore = [
     "F841",  # Unused variable
     "ARG001",  # Unused argument
     "S603",    # Subprocess call with non-literal input
+    "BLE001",  # Blind exception catch
 ]
 
 # Allow unused variables when underscore-prefixed

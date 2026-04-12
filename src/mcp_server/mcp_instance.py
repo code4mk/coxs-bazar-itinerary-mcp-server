@@ -1,12 +1,6 @@
-import os
 from fastmcp import FastMCP
 from mcp_server.config.auth_provider import get_auth_provider
-from dotenv import load_dotenv
-
-
-load_dotenv()
-
-is_auth_enabled = os.environ.get("AUTH_ENABLED", "").lower() in ("true", "1")
+from mcp_server.config.settings import settings
 
 # Configuration for MCP initialization
 mcp_config_context = {
@@ -14,8 +8,10 @@ mcp_config_context = {
 }
 
 # Add auth if auth is enabled
+is_auth_enabled = settings.auth_enabled
+
 if is_auth_enabled:
-    auth_provider = os.environ.get("AUTH_PROVIDER", "github")
+    auth_provider = settings.auth_provider
     mcp_config_context["auth"] = get_auth_provider(auth_provider)
 
 

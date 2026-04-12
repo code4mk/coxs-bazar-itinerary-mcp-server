@@ -1,11 +1,20 @@
 """Unit tests for the main server module."""
 import pytest
-import sys
-from unittest.mock import patch, Mock, MagicMock
-from pathlib import Path
+from unittest.mock import patch, Mock
+from mcp_server.config.settings import Settings
 
 
 SERVER_MODULE = "mcp_server.server"
+
+
+def _make_settings(**overrides) -> Settings:
+    defaults = {
+        "transport_name": "http",
+        "server_port": 8000,
+        "server_host": "127.0.0.1",
+    }
+    defaults.update(overrides)
+    return Settings(**defaults)
 
 
 @pytest.mark.unit
@@ -15,9 +24,7 @@ class TestServerMain:
     @patch(f"{SERVER_MODULE}.mcp")
     @patch(f"{SERVER_MODULE}.FileSystemProvider")
     @patch(f"{SERVER_MODULE}.RateLimitingMiddleware")
-    @patch.dict("os.environ", {
-        "TRANSPORT_NAME": "stdio",
-    }, clear=False)
+    @patch(f"{SERVER_MODULE}.settings", _make_settings(transport_name="stdio"))
     def test_main_stdio_transport(self, mock_rate_limit, mock_fsp, mock_mcp):
         from mcp_server.server import main
         mock_mcp.providers = []
@@ -30,11 +37,9 @@ class TestServerMain:
     @patch(f"{SERVER_MODULE}.mcp")
     @patch(f"{SERVER_MODULE}.FileSystemProvider")
     @patch(f"{SERVER_MODULE}.RateLimitingMiddleware")
-    @patch.dict("os.environ", {
-        "TRANSPORT_NAME": "http",
-        "SERVER_PORT": "9000",
-        "SERVER_HOST": "127.0.0.1",
-    }, clear=False)
+    @patch(f"{SERVER_MODULE}.settings", _make_settings(
+        transport_name="http", server_port=9000, server_host="127.0.0.1"
+    ))
     def test_main_http_transport(self, mock_rate_limit, mock_fsp, mock_mcp):
         from mcp_server.server import main
         mock_mcp.providers = []
@@ -49,11 +54,9 @@ class TestServerMain:
     @patch(f"{SERVER_MODULE}.mcp")
     @patch(f"{SERVER_MODULE}.FileSystemProvider")
     @patch(f"{SERVER_MODULE}.RateLimitingMiddleware")
-    @patch.dict("os.environ", {
-        "TRANSPORT_NAME": "streamable-http",
-        "SERVER_PORT": "8080",
-        "SERVER_HOST": "0.0.0.0",
-    }, clear=False)
+    @patch(f"{SERVER_MODULE}.settings", _make_settings(
+        transport_name="streamable-http", server_port=8080, server_host="0.0.0.0"
+    ))
     def test_main_streamable_http_transport(self, mock_rate_limit, mock_fsp, mock_mcp):
         from mcp_server.server import main
         mock_mcp.providers = []
@@ -68,11 +71,9 @@ class TestServerMain:
     @patch(f"{SERVER_MODULE}.mcp")
     @patch(f"{SERVER_MODULE}.FileSystemProvider")
     @patch(f"{SERVER_MODULE}.RateLimitingMiddleware")
-    @patch.dict("os.environ", {
-        "TRANSPORT_NAME": "sse",
-        "SERVER_PORT": "8000",
-        "SERVER_HOST": "0.0.0.0",
-    }, clear=False)
+    @patch(f"{SERVER_MODULE}.settings", _make_settings(
+        transport_name="sse", server_port=8000, server_host="0.0.0.0"
+    ))
     def test_main_sse_transport(self, mock_rate_limit, mock_fsp, mock_mcp):
         from mcp_server.server import main
         mock_mcp.providers = []
@@ -87,33 +88,22 @@ class TestServerMain:
     @patch(f"{SERVER_MODULE}.mcp")
     @patch(f"{SERVER_MODULE}.FileSystemProvider")
     @patch(f"{SERVER_MODULE}.RateLimitingMiddleware")
-    @patch.dict("os.environ", {}, clear=False)
+    @patch(f"{SERVER_MODULE}.settings", _make_settings(transport_name="stdio"))
     def test_main_default_transport(self, mock_rate_limit, mock_fsp, mock_mcp):
         from mcp_server.server import main
         mock_mcp.providers = []
         mock_mcp.add_middleware = Mock()
 
-        env_backup = {}
-        for key in ("TRANSPORT_NAME", "SERVER_PORT", "SERVER_HOST"):
-            import os
-            env_backup[key] = os.environ.pop(key, None)
+        main()
 
-        try:
-            main()
-            mock_mcp.run.assert_called_once_with(transport="stdio")
-        finally:
-            for key, val in env_backup.items():
-                if val is not None:
-                    os.environ[key] = val
+        mock_mcp.run.assert_called_once_with(transport="stdio")
 
     @patch(f"{SERVER_MODULE}.mcp")
     @patch(f"{SERVER_MODULE}.FileSystemProvider")
     @patch(f"{SERVER_MODULE}.RateLimitingMiddleware")
-    @patch.dict("os.environ", {
-        "TRANSPORT_NAME": "http",
-        "SERVER_PORT": "8000",
-        "SERVER_HOST": "0.0.0.0",
-    }, clear=False)
+    @patch(f"{SERVER_MODULE}.settings", _make_settings(
+        transport_name="http", server_port=8000, server_host="0.0.0.0"
+    ))
     def test_main_registers_providers(self, mock_rate_limit, mock_fsp, mock_mcp):
         from mcp_server.server import main
         mock_mcp.providers = []
@@ -127,9 +117,7 @@ class TestServerMain:
     @patch(f"{SERVER_MODULE}.mcp")
     @patch(f"{SERVER_MODULE}.FileSystemProvider")
     @patch(f"{SERVER_MODULE}.RateLimitingMiddleware")
-    @patch.dict("os.environ", {
-        "TRANSPORT_NAME": "stdio",
-    }, clear=False)
+    @patch(f"{SERVER_MODULE}.settings", _make_settings(transport_name="stdio"))
     def test_main_adds_rate_limiting(self, mock_rate_limit, mock_fsp, mock_mcp):
         from mcp_server.server import main
         mock_mcp.providers = []

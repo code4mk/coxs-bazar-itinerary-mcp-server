@@ -1,7 +1,7 @@
 """Unit tests for helper utility functions."""
 import pytest
 from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime
+from datetime import UTC, datetime
 
 
 @pytest.mark.unit
@@ -11,7 +11,7 @@ class TestFormatDate:
     def test_format_today(self):
         from mcp_server.utils.helpers import format_date
         result = format_date("today")
-        expected = datetime.today().strftime("%d %b %Y")
+        expected = datetime.now(tz=UTC).strftime("%d %b %Y")
         assert result == expected
 
     def test_format_valid_date_string(self):
@@ -27,7 +27,7 @@ class TestFormatDate:
     def test_format_invalid_date_returns_today(self):
         from mcp_server.utils.helpers import format_date
         result = format_date("not-a-date-at-all")
-        expected = datetime.today().strftime("%d %b %Y")
+        expected = datetime.now(tz=UTC).strftime("%d %b %Y")
         assert result == expected
 
 
@@ -237,7 +237,8 @@ class TestGetAuth0UserInfo:
         assert result["email"] == "test@example.com"
         mock_get.assert_called_once_with(
             "https://test.auth0.com/userinfo",
-            headers={"Authorization": "Bearer fake-token"}
+            headers={"Authorization": "Bearer fake-token"},
+            timeout=100,
         )
 
     @patch("mcp_server.utils.helpers.requests.get")

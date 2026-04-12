@@ -55,8 +55,8 @@ class TestCoxAiItinerary:
         mock_result = Mock()
         mock_result.action = "accept"
         mock_result.data = Mock()
-        mock_result.data.extendTrip = True
-        mock_result.data.newDays = 3
+        mock_result.data.extend_trip = True
+        mock_result.data.new_days = 3
         
         mock_context.elicit.return_value = mock_result
         mock_context.read_resource = AsyncMock(
@@ -82,7 +82,7 @@ class TestCoxAiItinerary:
         mock_result = Mock()
         mock_result.action = "accept"
         mock_result.data = Mock()
-        mock_result.data.extendTrip = False
+        mock_result.data.extend_trip = False
         
         mock_context.elicit.return_value = mock_result
         

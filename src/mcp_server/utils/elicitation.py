@@ -54,7 +54,9 @@ async def elicit_trip_extension(
             ),
             response_type=ItineraryPreferences,
         )
-    except (AttributeError, NotImplementedError):
+    except ValueError:
+        raise
+    except Exception:
         await ctx.error(
             f"Note: Elicitation not supported by client. "
             f"Proceeding with {current_days}-day itinerary."

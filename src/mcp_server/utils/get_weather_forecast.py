@@ -59,7 +59,7 @@ def get_weather_forecast(start_date: str, days: int) -> dict[str, Any]:
         response = open_meteo_client.get("/v1/forecast", params=params)
         response.raise_for_status()
         data = response.json()
-    except (ValueError, OSError) as e:
+    except Exception as e:
         logger.warning("Open-Meteo API error: %s. Using fallback data.", e)
         return get_fallback_forecast(start_date_str, end_date_str, days)
 
