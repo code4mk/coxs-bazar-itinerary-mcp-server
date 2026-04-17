@@ -1,12 +1,16 @@
 from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
+from mcp_server.lib.dot_env_loader import dot_env_loader
+
+
+dot_env_loader()
 
 
 class Settings(BaseSettings):
     """Settings for the MCP server."""
 
-    model_config = SettingsConfigDict(extra="ignore", env_file=".env", env_ignore_empty=True)
+    model_config = SettingsConfigDict(extra="ignore", env_ignore_empty=True)
 
     auth_enabled: bool = Field(default=False)
     auth_provider: str = Field(default="github")
